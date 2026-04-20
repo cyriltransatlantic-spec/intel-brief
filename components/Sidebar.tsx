@@ -4,25 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  TrendingUp,
-  DollarSign,
-  Settings,
-  Search,
+  Clock,
+  Sparkles,
+  Bookmark,
   ChevronLeft,
   ChevronRight,
   Zap,
 } from "lucide-react";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: FileText, label: "Reports", href: "/generate" },
-  { icon: Users, label: "Players", href: "/players" },
-  { icon: TrendingUp, label: "Trends", href: "/trends" },
-  { icon: DollarSign, label: "Funding", href: "/funding" },
-  { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: Clock, label: "Sessions", href: "/" },
+  { icon: Sparkles, label: "Generate", href: "/generate" },
+  { icon: Bookmark, label: "Saved", href: "/players" },
 ];
 
 export default function Sidebar() {
@@ -47,24 +40,6 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="px-3 py-3 border-b border-[#F1F5F9]">
-        <div
-          className={`flex items-center gap-2 bg-[#F8FAFC] rounded-lg px-3 py-2 ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          <Search size={14} className="text-[#64748B] flex-shrink-0" />
-          {!collapsed && (
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent text-xs text-[#0F172A] placeholder-[#64748B] outline-none w-full"
-            />
-          )}
-        </div>
-      </div>
-
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map(({ icon: Icon, label, href }) => {
@@ -84,7 +59,9 @@ export default function Sidebar() {
               <Icon
                 size={16}
                 className={`flex-shrink-0 ${
-                  isActive ? "text-white" : "text-[#64748B] group-hover:text-[#0F172A]"
+                  isActive
+                    ? "text-white"
+                    : "text-[#64748B] group-hover:text-[#0F172A]"
                 }`}
               />
               {!collapsed && (
@@ -95,26 +72,11 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* User */}
+      {/* Collapse */}
       <div className="border-t border-[#F1F5F9] px-3 py-4">
-        <div
-          className={`flex items-center gap-3 ${collapsed ? "justify-center" : ""}`}
-        >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1D4ED8] to-[#3B82F6] flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
-            CR
-          </div>
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-[#0F172A] truncate">
-                Cole Rattler
-              </p>
-              <p className="text-[10px] text-[#64748B] truncate">Analyst</p>
-            </div>
-          )}
-        </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className={`mt-3 w-full flex items-center justify-center gap-2 py-1.5 rounded-lg text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A] transition-all text-xs`}
+          className="w-full flex items-center justify-center gap-2 py-1.5 rounded-lg text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A] transition-all text-xs"
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           {!collapsed && <span>Collapse</span>}

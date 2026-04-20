@@ -1,5 +1,4 @@
 export type Signal = "up" | "down" | "stable";
-export type ReportStatus = "Active" | "Draft" | "Archived";
 export type ReportDepth = "Quick Brief" | "Full Analysis" | "Deep Dive";
 export type Region = "Global" | "Europe" | "France" | "USA" | "Asia";
 export type CompanyType = "Startup" | "Scale-up" | "Incumbent";
@@ -7,41 +6,24 @@ export type CompanyStage = "Seed" | "Series A" | "Series B" | "Series C+" | "Pub
 export type ImpactLevel = "High" | "Medium" | "Low";
 export type TrendDirection = "up" | "down" | "stable";
 
-export interface ReportRow {
+export interface ReportSession {
   slug: string;
   industry: string;
-  type: ReportDepth;
-  status: ReportStatus;
   region: string;
-  execBrief: string;
-  geoFocus: string;
-  keyPlayer: string;
-  estFunding: string;
-  signal: Signal;
+  depth: string;
+  generatedAt: string;
 }
 
-export interface Company {
-  id: string;
+export interface SavedStartup {
   name: string;
-  industry: string;
   type: CompanyType;
   stage: CompanyStage;
   hq: string;
-  funding: string;
-  founded: number;
   description: string;
+  founded: number;
   notable: string;
-}
-
-export interface Trend {
-  id: string;
-  title: string;
-  signal: string;
-  direction: TrendDirection;
-  impact: ImpactLevel;
-  category: "AI" | "Regulation" | "Funding" | "Market";
-  industries: string[];
-  lastUpdated: string;
+  industry: string;
+  savedAt: string;
 }
 
 export interface GeneratedReport {

@@ -113,7 +113,7 @@ export default function GeneratePage() {
           .replace(/[^a-z0-9\s]/g, "")
           .trim()
           .replace(/\s+/g, "-") || "custom-report";
-      saveReport(slug, data);
+      saveReport(slug, data, { industry, region, depth });
       setGeneratedSlug(slug);
       setIsDone(true);
     } catch (err: unknown) {

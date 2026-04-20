@@ -6,17 +6,18 @@ import TopBar from "@/components/TopBar";
 import TabNav from "@/components/TabNav";
 import FundingChart from "@/components/FundingChart";
 import { useReports } from "@/context/ReportContext";
-import { mockReports } from "@/lib/mockData";
 import {
   TrendingUp,
   TrendingDown,
   Minus,
   ArrowLeft,
-  Download,
-  Building2,
-  Globe,
+  Bookmark,
+  BookmarkCheck,
+  TrendingUp as TrendingUpIcon,
   BarChart3,
+  Globe,
   Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 const TABS = [
@@ -25,6 +26,7 @@ const TABS = [
   { id: "players", label: "Players" },
   { id: "funding", label: "Funding" },
   { id: "summary", label: "Summary" },
+  { id: "sources", label: "Sources" },
 ];
 
 const stageBadgeColors: Record<string, string> = {
@@ -38,12 +40,11 @@ const stageBadgeColors: Record<string, string> = {
 export default function ReportPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
-  const { getReport } = useReports();
+  const { getReport, saveStartup, unsaveStartup, isStartupSaved } = useReports();
   const [activeTab, setActiveTab] = useState("overview");
   const [playerFilter, setPlayerFilter] = useState("All");
 
   const report = getReport(slug);
-  const meta = mockReports.find((r) => r.slug === slug);
 
   if (!report) {
     return (
@@ -87,43 +88,34 @@ export default function ReportPage() {
       ? report.players
       : report.players.filter((p) => p.type === playerFilter);
 
+  const visibleTabs =
+    report.sources && report.sources.length > 0
+      ? TABS
+      : TABS.filter((t) => t.id !== "sources");
+
   return (
     <div className="min-h-screen">
       <TopBar title={`Report: ${report.industry}`} />
 
       <main className="p-6 space-y-5">
-        {/* Back + Header */}
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-sm text-[#64748B] hover:text-[#0F172A] transition-colors"
         >
           <ArrowLeft size={14} />
-          Back to Dashboard
+          Back
         </button>
 
         {/* Report Header */}
         <div className="bg-gradient-to-r from-[#1D4ED8] to-[#3B82F6] rounded-xl p-6 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-1">{report.industry}</h1>
-              <p className="text-blue-100 text-sm">{report.tagline}</p>
-            </div>
-            {meta && (
-              <span
-                className={`text-xs font-medium px-3 py-1 rounded-full border ${
-                  meta.status === "Active"
-                    ? "bg-white/20 border-white/30 text-white"
-                    : "bg-white/10 border-white/20 text-white/70"
-                }`}
-              >
-                {meta.status}
-              </span>
-            )}
+          <div>
+            <h1 className="text-2xl font-bold mb-1">{report.industry}</h1>
+            <p className="text-blue-100 text-sm">{report.tagline}</p>
           </div>
           <div className="flex gap-4 mt-5">
             {[
               { label: "Market Size", value: report.overview.market_size, icon: BarChart3 },
-              { label: "Growth Rate", value: report.overview.growth_rate, icon: TrendingUp },
+              { label: "Growth Rate", value: report.overview.growth_rate, icon: TrendingUpIcon },
               { label: "Maturity", value: report.overview.maturity, icon: Sparkles },
               { label: "Geography", value: report.overview.geography, icon: Globe },
             ].map(({ label, value, icon: Icon }) => (
@@ -141,7 +133,7 @@ export default function ReportPage() {
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden">
           <div className="px-6 pt-0">
-            <TabNav tabs={TABS} active={activeTab} onChange={setActiveTab} />
+            <TabNav tabs={visibleTabs} active={activeTab} onChange={setActiveTab} />
           </div>
 
           <div className="p-6">
@@ -227,7 +219,7 @@ export default function ReportPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC]">
-                      {["Company", "Type", "Stage", "HQ", "Description", "Notable"].map((col) => (
+                      {["Company", "Type", "Stage", "HQ", "Description", "Notable", ""].map((col) => (
                         <th
                           key={col}
                           className="px-4 py-3 text-left text-xs font-semibold text-[#64748B] tracking-wide"
@@ -238,35 +230,55 @@ export default function ReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPlayers.map((player, i) => (
-                      <tr key={i} className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors">
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1D4ED8] to-[#3B82F6] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                              {player.name[0]}
+                    {filteredPlayers.map((player, i) => {
+                      const saved = isStartupSaved(player.name, report.industry);
+                      return (
+                        <tr key={i} className="border-b border-[#F1F5F9] hover:bg-[#F8FAFC] transition-colors">
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1D4ED8] to-[#3B82F6] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                {player.name[0]}
+                              </div>
+                              <span className="font-semibold text-sm text-[#0F172A]">{player.name}</span>
                             </div>
-                            <span className="font-semibold text-sm text-[#0F172A]">{player.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className="text-xs bg-[#F1F5F9] text-[#64748B] px-2 py-0.5 rounded-md">
-                            {player.type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                              stageBadgeColors[player.stage] || "bg-slate-50 text-slate-600 border-slate-200"
-                            }`}
-                          >
-                            {player.stage}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-sm text-[#64748B]">{player.hq}</td>
-                        <td className="px-4 py-3.5 text-xs text-[#64748B] max-w-xs">{player.description}</td>
-                        <td className="px-4 py-3.5 text-xs text-[#64748B] max-w-xs">{player.notable}</td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="text-xs bg-[#F1F5F9] text-[#64748B] px-2 py-0.5 rounded-md">
+                              {player.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                stageBadgeColors[player.stage] ?? "bg-slate-50 text-slate-600 border-slate-200"
+                              }`}
+                            >
+                              {player.stage}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-[#64748B]">{player.hq}</td>
+                          <td className="px-4 py-3.5 text-xs text-[#64748B] max-w-xs">{player.description}</td>
+                          <td className="px-4 py-3.5 text-xs text-[#64748B] max-w-xs">{player.notable}</td>
+                          <td className="px-4 py-3.5">
+                            <button
+                              onClick={() =>
+                                saved
+                                  ? unsaveStartup(player.name, report.industry)
+                                  : saveStartup({ ...player, industry: report.industry })
+                              }
+                              title={saved ? "Remove from saved" : "Save startup"}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                saved
+                                  ? "text-[#2563EB] bg-blue-50 hover:bg-red-50 hover:text-red-500"
+                                  : "text-[#CBD5E1] hover:text-[#2563EB] hover:bg-blue-50"
+                              }`}
+                            >
+                              {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -278,9 +290,7 @@ export default function ReportPage() {
                 <div className="flex items-center gap-6">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl px-6 py-4">
                     <p className="text-xs text-blue-600 mb-1">Total Funding (2024)</p>
-                    <p className="text-3xl font-bold text-[#1D4ED8]">
-                      {report.funding.total_2024}
-                    </p>
+                    <p className="text-3xl font-bold text-[#1D4ED8]">{report.funding.total_2024}</p>
                   </div>
                   <p className="text-sm text-[#64748B] flex-1 leading-relaxed">
                     {report.funding.narrative}
@@ -311,7 +321,7 @@ export default function ReportPage() {
                         <td className="px-4 py-3">
                           <span
                             className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                              stageBadgeColors[round.stage] || "bg-slate-50 text-slate-600 border-slate-200"
+                              stageBadgeColors[round.stage] ?? "bg-slate-50 text-slate-600 border-slate-200"
                             }`}
                           >
                             {round.stage}
@@ -366,13 +376,32 @@ export default function ReportPage() {
                     {report.summary.verdict}
                   </p>
                 </div>
+              </div>
+            )}
 
-                <div className="flex justify-end">
-                  <button className="flex items-center gap-2 px-5 py-2.5 border border-[#2563EB] text-[#2563EB] rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors">
-                    <Download size={14} />
-                    Export as PDF
-                  </button>
-                </div>
+            {/* Sources */}
+            {activeTab === "sources" && report.sources && (
+              <div className="space-y-2">
+                {report.sources.map((src, i) => (
+                  <a
+                    key={i}
+                    href={src.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 p-4 rounded-xl border border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-md bg-[#F1F5F9] flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ExternalLink size={11} className="text-[#64748B]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[#0F172A] group-hover:text-[#2563EB] transition-colors truncate">
+                        {src.title}
+                      </p>
+                      <p className="text-xs text-[#94A3B8] mt-0.5 truncate">{src.url}</p>
+                    </div>
+                    <span className="text-xs text-[#94A3B8] whitespace-nowrap">{src.date}</span>
+                  </a>
+                ))}
               </div>
             )}
           </div>

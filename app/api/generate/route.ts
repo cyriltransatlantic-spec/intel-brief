@@ -14,9 +14,11 @@ export async function POST(req: Request) {
       return Response.json({ error: "Industry is required" }, { status: 400 });
     }
 
-    const systemPrompt = `You are an intelligence analyst generating a structured market brief.
-Use web search to find CURRENT data (funding rounds, key players, recent news) from the last 90 days.
-Return ONLY valid JSON matching this exact schema — no markdown, no code fences:
+    const isFrance = region === "France";
+
+    const systemPrompt = `You are an intelligence analyst. Use web search to find current data${isFrance ? ", and the data.gouv.fr tools for official French public datasets (companies, funding, economic indicators)" : ""}, then output ONLY a JSON object — no prose, no markdown, no code fences. Start your response with { and end with }.
+
+Schema:
 {
   "industry": string,
   "tagline": string,
@@ -25,7 +27,7 @@ Return ONLY valid JSON matching this exact schema — no markdown, no code fence
     "growth_rate": string,
     "maturity": string,
     "geography": string,
-    "summary": string (3-4 sentences with current data)
+    "summary": string
   },
   "trends": [{ "title": string, "signal": string, "direction": "up"|"down"|"stable", "impact": "High"|"Medium"|"Low" }],
   "players": [{ "name": string, "type": "Startup"|"Scale-up"|"Incumbent", "stage": "Seed"|"Series A"|"Series B"|"Series C+"|"Public", "hq": string, "description": string, "founded": number, "notable": string }],
@@ -41,16 +43,15 @@ Return ONLY valid JSON matching this exact schema — no markdown, no code fence
     "verdict": string
   },
   "sources": [{ "title": string, "url": string, "date": string }]
-}
-Every claim must be sourced. Include all URLs you consulted in sources[].`;
+}`;
 
     const userPrompt = `Generate a full intelligence briefing for: "${industry}" in region: ${region}. Depth: ${depth}.
-Search for current 2024-2025 data. Include 4 trends, 5 key players, 4 recent funding rounds.
-Search for recent news, funding announcements, and market developments from the last 90 days.
-Return JSON only.`;
+Search for current 2024-2025 data. Include 4 trends, 5 key players, 4 recent funding rounds.${isFrance ? "\nPrioritize data.gouv.fr for official French company registries, funding data, and economic statistics." : ""}
+Output JSON only — start immediately with {`;
 
     let messages: Anthropic.MessageParam[] = [
       { role: "user", content: userPrompt },
+      { role: "assistant", content: "{" },
     ];
 
     let response: Anthropic.Message;
@@ -58,33 +59,56 @@ Return JSON only.`;
     let continuations = 0;
 
     do {
-      response = await client.messages.create({
-        model: "claude-opus-4-6",
-        max_tokens: 8000,
-        system: systemPrompt,
-        tools: [{ type: "web_search_20250305", name: "web_search" }],
-        messages,
-      });
+      if (isFrance) {
+        response = await (client.beta.messages.create as Function)({
+          model: "claude-sonnet-4-6",
+          max_tokens: 8000,
+          system: systemPrompt,
+          betas: ["mcp-client-2025-04-04"],
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          mcp_servers: [
+            {
+              type: "url",
+              url: "https://mcp.data.gouv.fr/mcp",
+              name: "datagouv",
+            },
+          ],
+          messages,
+        });
+      } else {
+        response = await client.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 8000,
+          system: systemPrompt,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages,
+        });
+      }
 
-      if (response.stop_reason === "pause_turn") {
+      if (response.stop_reason === "tool_use" || response.stop_reason === "pause_turn") {
         messages.push({ role: "assistant", content: response.content });
         continuations++;
       }
-    } while (response.stop_reason === "pause_turn" && continuations < MAX_CONTINUATIONS);
+    } while (
+      (response.stop_reason === "tool_use" || response.stop_reason === "pause_turn") &&
+      continuations < MAX_CONTINUATIONS
+    );
 
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
     if (!textBlock) {
+      console.error("No text block. stop_reason:", response.stop_reason, "content types:", response.content.map(b => b.type));
       return Response.json({ error: "No text response from model" }, { status: 500 });
     }
 
-    const text = textBlock.text.trim();
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
-    if (jsonStart === -1 || jsonEnd === -1) {
+    // The prefill means the actual JSON starts with the prefilled "{"
+    const raw = "{" + textBlock.text.trim();
+    const jsonEnd = raw.lastIndexOf("}");
+    if (jsonEnd === -1) {
+      console.error("No closing brace. text preview:", raw.slice(0, 300));
       return Response.json({ error: "Could not parse JSON from response" }, { status: 500 });
     }
 
-    const reportData = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+    const reportData = JSON.parse(raw.slice(0, jsonEnd + 1));
     return Response.json(reportData);
   } catch (error: unknown) {
     console.error("Generate error:", error);
