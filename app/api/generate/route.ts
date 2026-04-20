@@ -51,7 +51,6 @@ Output JSON only — start immediately with {`;
 
     let messages: Anthropic.MessageParam[] = [
       { role: "user", content: userPrompt },
-      { role: "assistant", content: "{" },
     ];
 
     let response: Anthropic.Message;
@@ -100,8 +99,7 @@ Output JSON only — start immediately with {`;
       return Response.json({ error: "No text response from model" }, { status: 500 });
     }
 
-    // The prefill means the actual JSON starts with the prefilled "{"
-    const raw = "{" + textBlock.text.trim();
+    const raw = textBlock.text.trim();
     const jsonEnd = raw.lastIndexOf("}");
     if (jsonEnd === -1) {
       console.error("No closing brace. text preview:", raw.slice(0, 300));
